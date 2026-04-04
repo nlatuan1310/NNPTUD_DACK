@@ -1,0 +1,155 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  role         Role          @default(CUSTOMER)
+  phone        String?
+  
+  // Relations
+  reservations Reservation[]
+  staffOrders  Order[]       @relation("StaffOrders")
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER
+}
+
+model Table {
+  id           String        @id @default(uuid())
+  tableNumber  Int           @unique
+  floor        Int
+  capacity     Int
+  status       TableStatus   @default(AVAILABLE)
+
+  reservations Reservation[]
+  orders       Order[]
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  foods       Food[]
+}
+
+model Food {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  status      Boolean     @default(true)
+  
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+}
+
+model Ingredient {
+  id            String   @id @default(uuid())
+  name          String
+  unit          String
+  stockQuantity Float
+  reorderLevel  Float
+}
+
+model Promotion {
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  discountPercentage Float
+  startDate          DateTime
+  endDate            DateTime
+  isActive           Boolean   @default(true)
+  invoices           Invoice[]
+}
+
+model Reservation {
+  id              String            @id @default(uuid())
+  reservationTime DateTime
+  guestCount      Int
+  status          ReservationStatus @default(PENDING)
+
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  tableId         String
+  table           Table             @relation(fields: [tableId], references: [id])
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  status      OrderStatus @default(PENDING)
+  totalAmount Float       @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  staffId     String
+  staff       User        @relation("StaffOrders", fields: [staffId], references: [id])
+  tableId     String
+  table       Table       @relation(fields: [tableId], references: [id])
+  
+  orderItems  OrderItem[]
+  invoice     Invoice?
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  SERVED
+  CANCELLED
+  PAID
+}
+
+model OrderItem {
+  id                  String  @id @default(uuid())
+  quantity            Int
+  priceAtTimeOfOrder  Float
+  notes               String?
+
+  orderId             String
+  order               Order   @relation(fields: [orderId], references: [id])
+  foodId              String
+  food                Food    @relation(fields: [foodId], references: [id])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  finalAmount   Float
+  paymentMethod String
+  paymentStatus PaymentStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  promotionId   String?
+  promotion     Promotion?    @relation(fields: [promotionId], references: [id])
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
