@@ -147,9 +147,155 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
+// @desc    Thêm món vào Order
+// @route   POST /api/v1/orders/:orderId/items
+const addOrderItem = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { foodId, quantity, notes } = req.body;
+
+        if (!foodId || !quantity || quantity <= 0) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp foodId và quantity hợp lệ' });
+        }
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy Order' });
+        }
+
+        if (order.status === 'PAID' || order.status === 'CANCELLED') {
+            return res.status(400).json({ success: false, message: 'Không thể thêm món vào đơn đã đóng' });
+        }
+
+        const food = await prisma.food.findUnique({ where: { id: foodId } });
+        if (!food || !food.status) {
+            return res.status(404).json({ success: false, message: 'Món ăn không tồn tại hoặc ngừng phục vụ' });
+        }
+
+        const priceAtTimeOfOrder = food.price;
+        const totalItemCost = priceAtTimeOfOrder * quantity;
+
+        const [newOrderItem] = await prisma.$transaction([
+            prisma.orderItem.create({
+                data: {
+                    orderId,
+                    foodId,
+                    quantity,
+                    priceAtTimeOfOrder,
+                    notes
+                }
+            }),
+            prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    totalAmount: { increment: totalItemCost }
+                }
+            })
+        ]);
+
+        res.status(201).json({ success: true, data: newOrderItem });
+    } catch (error) {
+        console.error('Lỗi thêm món:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi thêm món' });
+    }
+};
+
+// @desc    Sửa món trong Order (quantity, notes)
+// @route   PUT /api/v1/orders/items/:itemId
+const updateOrderItem = async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { quantity, notes } = req.body;
+
+        const orderItem = await prisma.orderItem.findUnique({
+            where: { id: itemId },
+            include: { order: true }
+        });
+
+        if (!orderItem) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy chi tiết món' });
+        }
+
+        if (orderItem.order.status === 'PAID' || orderItem.order.status === 'CANCELLED') {
+            return res.status(400).json({ success: false, message: 'Không thể sửa món trong đơn đã đóng' });
+        }
+
+        let totalAmountDiff = 0;
+        let updateData = {};
+
+        if (notes !== undefined) updateData.notes = notes;
+        if (quantity !== undefined && quantity > 0) {
+            updateData.quantity = quantity;
+            const diffQuantity = quantity - orderItem.quantity;
+            totalAmountDiff = diffQuantity * orderItem.priceAtTimeOfOrder;
+        }
+
+        const [updatedOrderItem] = await prisma.$transaction([
+            prisma.orderItem.update({
+                where: { id: itemId },
+                data: updateData
+            }),
+            prisma.order.update({
+                where: { id: orderItem.orderId },
+                data: {
+                    totalAmount: { increment: totalAmountDiff }
+                }
+            })
+        ]);
+
+        res.status(200).json({ success: true, data: updatedOrderItem });
+    } catch (error) {
+        console.error('Lỗi sửa món:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi sửa món' });
+    }
+};
+
+// @desc    Xóa món khỏi Order
+// @route   DELETE /api/v1/orders/items/:itemId
+const removeOrderItem = async (req, res) => {
+    try {
+        const { itemId } = req.params;
+
+        const orderItem = await prisma.orderItem.findUnique({
+            where: { id: itemId },
+            include: { order: true }
+        });
+
+        if (!orderItem) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy chi tiết món' });
+        }
+
+        if (orderItem.order.status === 'PAID' || orderItem.order.status === 'CANCELLED') {
+            return res.status(400).json({ success: false, message: 'Không thể xoá món khỏi đơn đã đóng' });
+        }
+
+        const reduceAmount = orderItem.priceAtTimeOfOrder * orderItem.quantity;
+
+        await prisma.$transaction([
+            prisma.orderItem.delete({
+                where: { id: itemId }
+            }),
+            prisma.order.update({
+                where: { id: orderItem.orderId },
+                data: {
+                    totalAmount: { decrement: reduceAmount }
+                }
+            })
+        ]);
+
+        res.status(200).json({ success: true, message: 'Đã xóa món thành công' });
+    } catch (error) {
+        console.error('Lỗi xoá món:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi xoá món' });
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    addOrderItem,
+    updateOrderItem,
+    removeOrderItem
 };

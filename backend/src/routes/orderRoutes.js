@@ -4,7 +4,10 @@ const {
     createOrder,
     getOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    addOrderItem,
+    updateOrderItem,
+    removeOrderItem
 } = require('../controllers/orderController');
 
 // @TODO: Gắn Middleware xác thực (Auth) ở đây sau khi làm xong Authen
@@ -18,6 +21,13 @@ router.route('/:id')
 
 router.route('/:id/status')
     .put(updateOrderStatus);
+
+router.route('/:orderId/items')
+    .post(addOrderItem);
+
+router.route('/items/:itemId')
+    .put(updateOrderItem)
+    .delete(removeOrderItem);
 
 // Lỗi 404 cho các route không tồn tại trong order
 router.use('*', (req, res) => {
