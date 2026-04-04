@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 5000;
 
 // Các Route cơ bản
 const promotionRoutes = require('./routes/promotionRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Middleware
 app.use(cors());
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Sử dụng Route
 app.use('/api/v1/promotions', promotionRoutes);
+app.use('/api/v1/orders', orderRoutes);
 
 // Test server đang chạy
 app.get('/', (req, res) => {
