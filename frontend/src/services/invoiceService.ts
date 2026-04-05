@@ -26,5 +26,9 @@ export const invoiceService = {
   pay: async (id: string) => {
     const res = await apiClient.put(`/invoices/${id}/pay`, {});
     return res.data;
+  },
+  refund: async (id: string) => {
+    const res = await apiClient.put(`/invoices/${id}/refund`, {});
+    return res.data;
   }
 };

@@ -166,8 +166,52 @@ const deleteInvoice = async (req, res) => {
     }
 };
 
+// @desc    Hoàn tiền Hóa đơn (Chuyển Invoice sang REFUNDED, Order sang CANCELLED)
+// @route   PUT /api/v1/invoices/:id/refund
+const refundInvoice = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const invoice = await prisma.invoice.findUnique({
+            where: { id },
+            include: { order: true }
+        });
+
+        if (!invoice) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy hoá đơn để hoàn tiền' });
+        }
+
+        if (invoice.paymentStatus !== 'PAID') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Chỉ có thể hoàn tiền cho những Hoá đơn Đã thanh toán (PAID).' 
+            });
+        }
+
+        // Thực hiện Transaction hoàn tiền
+        const [refundedInvoice] = await prisma.$transaction([
+            // 1. Cập nhật hoá đơn thành REFUNDED
+            prisma.invoice.update({
+                where: { id },
+                data: { paymentStatus: 'REFUNDED' }
+            }),
+            // 2. Hủy Order liên kết để gạch doanh thu
+            prisma.order.update({
+                where: { id: invoice.orderId },
+                data: { status: 'CANCELLED' }
+            })
+        ]);
+
+        res.status(200).json({ success: true, message: 'Đã hoàn tiền Hóa đơn thành công.', data: refundedInvoice });
+    } catch (error) {
+        console.error('Lỗi hoàn tiền hoá đơn:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi hoàn tiền hoá đơn' });
+    }
+};
+
 module.exports = {
     checkout,
     confirmPayment,
-    deleteInvoice
+    deleteInvoice,
+    refundInvoice
 };
