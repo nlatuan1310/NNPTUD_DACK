@@ -7,6 +7,8 @@ const PORT = process.env.PORT || 5000;
 
 // Các Route cơ bản
 const categoryRoutes = require('./routes/categoryRoutes');
+const foodRoutes = require('./routes/foodRoutes');
+const ingredientRoutes = require('./routes/ingredientRoutes');
 const promotionRoutes = require('./routes/promotionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
@@ -18,6 +20,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Sử dụng Route
 app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/foods', foodRoutes);
+app.use('/api/v1/ingredients', ingredientRoutes);
 app.use('/api/v1/promotions', promotionRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
@@ -29,7 +33,7 @@ app.get('/', (req, res) => {
 
 // Middleware xử lý lỗi 404 (Không tìm thấy route)
 app.use((req, res, next) => {
-    res.status(404).json({ success: false, message: 'Endpoint không tồn tại' });
+  res.status(404).json({ success: false, message: 'Endpoint không tồn tại' });
 });
 
 // Bắt đầu server
