@@ -2,62 +2,6 @@ const prisma = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-/**
- * POST /api/v1/auth/register
- * Đăng ký tài khoản mới. Role mặc định là CUSTOMER.
- * Manager có thể tạo tài khoản STAFF bằng cách truyền thêm field "role".
- */
-const register = async (req, res, next) => {
-  try {
-    const { name, email, password, phone, role } = req.body || {};
-
-    // Kiểm tra các trường bắt buộc
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng cung cấp đầy đủ: name, email, password.',
-      });
-    }
-
-    // Kiểm tra email đã tồn tại chưa
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email này đã được đăng ký.',
-      });
-    }
-
-    // Mã hóa mật khẩu bằng bcrypt (salt rounds = 10)
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Tạo User mới
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        phone: phone || null,
-        role: 'CUSTOMER', // Ép buộc: Public register luôn tạo CUSTOMER
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        phone: true,
-      },
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Đăng ký thành công.',
-      data: newUser,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 /**
  * POST /api/v1/auth/login
@@ -151,4 +95,4 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe };
+module.exports = { login, getMe };

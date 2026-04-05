@@ -12,7 +12,6 @@ const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 router.use(verifyToken);
 
 // GET /api/v1/users - Lấy danh sách users (MANAGER, STAFF)
-// Lưu ý: controller xử lý logic STAFF chỉ thấy CUSTOMER
 router.get('/', checkRole('MANAGER', 'STAFF'), getAllUsers);
 
 // POST /api/v1/users - Tạo user mới / nhân viên mới (Chỉ MANAGER)

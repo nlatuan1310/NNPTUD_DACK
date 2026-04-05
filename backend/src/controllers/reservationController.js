@@ -43,66 +43,13 @@ const checkTimeConflict = async (tableId, newStart, excludeId = null) => {
 
 const createReservation = async (req, res, next) => {
   try {
-    const { tableId, reservationTime, guestCount, userId, newCustomer } = req.body || {};
+    const { tableId, reservationTime, guestCount, customerName, customerPhone } = req.body || {};
 
-    if (!tableId || !reservationTime || !guestCount) {
+    if (!tableId || !reservationTime || !guestCount || !customerName || !customerPhone) {
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng cung cấp đầy đủ: tableId, reservationTime, guestCount.',
+        message: 'Vui lòng cung cấp đầy đủ: tableId, reservationTime, guestCount, customerName, customerPhone.',
       });
-    }
-
-    // ========== XÁC ĐỊNH KHÁCH HÀNG ==========
-    let customerId = req.user.id; // Mặc định: người đang đăng nhập
-
-    if (req.user.role === 'MANAGER') {
-      if (newCustomer) {
-        // MANAGER tạo khách hàng mới inline
-        const { name, email, phone } = newCustomer;
-        if (!name || !email) {
-          return res.status(400).json({
-            success: false,
-            message: 'Vui lòng cung cấp tên và email cho khách hàng mới.',
-          });
-        }
-
-        // Kiểm tra email đã tồn tại
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-          return res.status(409).json({
-            success: false,
-            message: `Email "${email}" đã tồn tại trong hệ thống. Hãy chọn khách hàng từ danh sách.`,
-          });
-        }
-
-        // Tạo khách hàng mới với mật khẩu mặc định
-        const hashedPassword = await bcrypt.hash('123456', 10);
-        const createdCustomer = await prisma.user.create({
-          data: {
-            name,
-            email,
-            password: hashedPassword,
-            phone: phone || null,
-            role: 'CUSTOMER',
-          },
-        });
-        customerId = createdCustomer.id;
-      } else if (userId) {
-        // MANAGER chọn khách hàng hiện có
-        const existingCustomer = await prisma.user.findUnique({ where: { id: userId } });
-        if (!existingCustomer) {
-          return res.status(404).json({
-            success: false,
-            message: 'Không tìm thấy khách hàng.',
-          });
-        }
-        customerId = userId;
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: 'Vui lòng chọn khách hàng hoặc thêm thông tin khách hàng mới.',
-        });
-      }
     }
 
     // Kiểm tra bàn tồn tại
@@ -146,14 +93,14 @@ const createReservation = async (req, res, next) => {
     // Tạo reservation
     const reservation = await prisma.reservation.create({
       data: {
-        userId: customerId,
+        customerName,
+        customerPhone,
         tableId,
         reservationTime: requestedTime,
         guestCount: parseInt(guestCount),
       },
       include: {
         table: { select: { tableNumber: true, floor: true, capacity: true } },
-        user: { select: { name: true, email: true, phone: true } },
       },
     });
 
@@ -191,7 +138,6 @@ const getAllReservations = async (req, res, next) => {
       where,
       include: {
         table: { select: { tableNumber: true, floor: true, capacity: true } },
-        user: { select: { id: true, name: true, email: true, phone: true } },
       },
       orderBy: { reservationTime: 'asc' },
     });
@@ -207,25 +153,6 @@ const getAllReservations = async (req, res, next) => {
 };
 
 
-const getMyReservations = async (req, res, next) => {
-  try {
-    const reservations = await prisma.reservation.findMany({
-      where: { userId: req.user.id },
-      include: {
-        table: { select: { tableNumber: true, floor: true, capacity: true } },
-      },
-      orderBy: { reservationTime: 'desc' },
-    });
-
-    return res.status(200).json({
-      success: true,
-      count: reservations.length,
-      data: reservations,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 
 const updateReservationStatus = async (req, res, next) => {
@@ -273,7 +200,6 @@ const updateReservationStatus = async (req, res, next) => {
       data: { status },
       include: {
         table: { select: { tableNumber: true, floor: true } },
-        user: { select: { name: true, email: true, phone: true } },
       },
     });
 
@@ -392,7 +318,6 @@ const updateReservation = async (req, res, next) => {
       data: updateData,
       include: {
         table: { select: { tableNumber: true, floor: true, capacity: true } },
-        user: { select: { name: true, email: true, phone: true } },
       },
     });
 
@@ -437,7 +362,6 @@ const deleteReservation = async (req, res, next) => {
 module.exports = {
   createReservation,
   getAllReservations,
-  getMyReservations,
   updateReservationStatus,
   updateReservation,
   deleteReservation,

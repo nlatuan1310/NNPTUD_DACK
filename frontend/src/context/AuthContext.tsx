@@ -5,7 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'CUSTOMER' | 'STAFF' | 'MANAGER';
+  role: 'STAFF' | 'MANAGER';
   phone: string | null;
 }
 
@@ -14,11 +14,9 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => void;
   isManager: boolean;
   isStaff: boolean;
-  isCustomer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,9 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
-    await apiClient.post('/auth/register', { name, email, password, phone });
-  };
+
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -70,10 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isManager = user?.role === 'MANAGER';
   const isStaff = user?.role === 'STAFF';
-  const isCustomer = user?.role === 'CUSTOMER';
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isManager, isStaff, isCustomer }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, isManager, isStaff }}>
       {children}
     </AuthContext.Provider>
   );

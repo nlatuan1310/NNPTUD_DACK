@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
-
+const prisma = require('../src/config/db');
 async function main() {
   console.log('Bắt đầu quy trình Seed dữ liệu...');
 
@@ -26,10 +24,7 @@ async function main() {
   const staff = await prisma.user.create({
     data: { name: 'Staff Phu Vu', email: 'staff@gmail.com', password: hashPassword, role: 'STAFF', phone: '0123456788' }
   });
-  const customer = await prisma.user.create({
-    data: { name: 'Customer Tuan', email: 'customer@gmail.com', password: hashPassword, role: 'CUSTOMER', phone: '0123456787' }
-  });
-  console.log('✅ Đã tạo các role user mẫu.');
+  console.log('✅ Đã tạo các role user nội bộ mẫu.');
 
   // 3. Tao Ban
   for (let i = 1; i <= 6; i++) {

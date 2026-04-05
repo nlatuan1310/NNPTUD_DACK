@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   createReservation,
   getAllReservations,
-  getMyReservations,
+
   updateReservationStatus,
   updateReservation,
   deleteReservation,
@@ -12,9 +12,7 @@ const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
 
-router.get('/my', getMyReservations);
-
-router.post('/', checkRole('CUSTOMER', 'MANAGER'), createReservation);
+router.post('/', checkRole('MANAGER', 'STAFF'), createReservation);
 
 router.get('/', checkRole('MANAGER', 'STAFF'), getAllReservations);
 

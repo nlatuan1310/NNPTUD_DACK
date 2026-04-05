@@ -12,7 +12,6 @@ import {
   Search,
   Shield,
   ShieldCheck,
-  UserCircle,
 } from 'lucide-react';
 
 interface UserItem {
@@ -20,13 +19,12 @@ interface UserItem {
   name: string;
   email: string;
   phone: string | null;
-  role: 'CUSTOMER' | 'STAFF' | 'MANAGER';
+  role: 'STAFF' | 'MANAGER';
 }
 
 const roleBadge: Record<string, { label: string; classes: string; icon: typeof Shield }> = {
   MANAGER: { label: 'Quản lý', classes: 'bg-primary-100 text-primary-700', icon: ShieldCheck },
   STAFF: { label: 'Nhân viên', classes: 'bg-info-500/10 text-info-600', icon: Shield },
-  CUSTOMER: { label: 'Khách hàng', classes: 'bg-success-500/10 text-success-600', icon: UserCircle },
 };
 
 export default function UserList() {
@@ -119,7 +117,7 @@ export default function UserList() {
             <Users size={24} className="text-primary-500" />
             Quản lý Nhân sự
           </h1>
-          <p className="text-dark-500 text-sm mt-1">Quản lý tài khoản nhân viên và khách hàng.</p>
+          <p className="text-dark-500 text-sm mt-1">Quản lý tài khoản nhân viên và quản lý.</p>
         </div>
         {isManager && (
           <button
@@ -152,7 +150,6 @@ export default function UserList() {
             className="px-4 py-2.5 bg-white border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 cursor-pointer"
           >
             <option value="">Tất cả vai trò</option>
-            <option value="CUSTOMER">Khách hàng</option>
             <option value="STAFF">Nhân viên</option>
             <option value="MANAGER">Quản lý</option>
           </select>
@@ -310,7 +307,6 @@ export default function UserList() {
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 cursor-pointer"
                 >
-                  <option value="CUSTOMER">Khách hàng</option>
                   <option value="STAFF">Nhân viên</option>
                   <option value="MANAGER">Quản lý</option>
                 </select>

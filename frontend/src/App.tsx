@@ -5,11 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Layouts
 import AdminLayout from './components/layout/AdminLayout';
-import CustomerLayout from './components/layout/CustomerLayout';
-
 // Auth pages
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
 
 // Admin pages
 import UserList from './pages/admin/UserList';
@@ -21,10 +18,6 @@ import InvoiceHistory from './pages/admin/InvoiceHistory';
 import PromotionManager from './pages/admin/PromotionManager';
 import POS from './pages/staff/POS';
 
-// Customer pages
-import Menu from './pages/customer/Menu';
-import Booking from './pages/customer/Booking';
-import MyBookings from './pages/customer/MyBookings';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -43,16 +36,8 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login" element={user ? <Navigate to={user.role === 'CUSTOMER' ? '/' : '/admin/tables'} replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
-
-      {/* Customer Portal */}
-      <Route element={<ProtectedRoute allowedRoles={['CUSTOMER']}><CustomerLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Menu />} />
-        <Route path="/menu" element={<Menu />} />
-        <Route path="/reservation/new" element={<Booking />} />
-        <Route path="/my-reservations" element={<MyBookings />} />
-      </Route>
+      <Route path="/login" element={user ? <Navigate to={'/admin/tables'} replace /> : <Login />} />
+      <Route path="/" element={<Navigate to={'/admin/tables'} replace />} />
 
       {/* Admin / Staff Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['MANAGER', 'STAFF']}><AdminLayout /></ProtectedRoute>}>
@@ -67,7 +52,7 @@ function AppRoutes() {
       </Route>
 
       {/* Catch-all */}
-      <Route path="*" element={<Navigate to={user ? (user.role === 'CUSTOMER' ? '/' : '/admin/tables') : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={user ? '/admin/tables' : '/login'} replace />} />
     </Routes>
   );
 }

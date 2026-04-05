@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UtensilsCrossed, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -25,12 +25,7 @@ export default function Login() {
       // Redirect dựa trên role
       const stored = localStorage.getItem('user');
       if (stored) {
-        const u = JSON.parse(stored);
-        if (u.role === 'CUSTOMER') {
-          navigate('/');
-        } else {
-          navigate('/admin/tables');
-        }
+        navigate('/admin/tables');
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -120,13 +115,7 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Register link */}
-        <p className="text-center mt-6 text-dark-400 text-sm">
-          Chưa có tài khoản?{' '}
-          <Link to="/register" className="text-primary-400 hover:text-primary-300 font-semibold transition-colors">
-            Đăng ký ngay
-          </Link>
-        </p>
+
       </div>
     </div>
   );
