@@ -34,8 +34,17 @@ export default function InvoiceHistory() {
   };
 
   const handleRefund = async (id: string) => {
-    // Gọi API để hoàn tiền (tuỳ thuộc backend)
-    toast.error(`Chức năng hoàn tiền cho hóa đơn ${id.substring(0,8)} chưa khả dụng`);
+    if (window.confirm('Bạn có chắc chắn muốn HOÀN TIỀN cho giao dịch này? Hành động này không thể hoàn tác.')) {
+      try {
+        const res = await invoiceService.refund(id);
+        if (res.success) {
+          toast.success('Đã hoàn tiền thành công!');
+          fetchInvoices();
+        }
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Lỗi khi hoàn tiền');
+      }
+    }
   };
 
   return (

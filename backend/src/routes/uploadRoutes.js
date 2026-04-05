@@ -12,8 +12,12 @@ const upload = multer({ storage });
 // @access  Manager/Staff
 // =============================================
 
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
+
+router.use(verifyToken);
+
 // Middleware `upload.single('image')` sẽ tìm file gửi lên theo key 'image'
-router.post('/', upload.single('image'), (req, res) => {
+router.post('/', checkRole('MANAGER', 'STAFF'), upload.single('image'), (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -43,7 +47,7 @@ router.post('/', upload.single('image'), (req, res) => {
 // @route   DELETE /api/v1/uploads
 // @access  Manager
 // =============================================
-router.delete('/', async (req, res) => {
+router.delete('/', checkRole('MANAGER'), async (req, res) => {
     try {
         const { publicId } = req.body;
 

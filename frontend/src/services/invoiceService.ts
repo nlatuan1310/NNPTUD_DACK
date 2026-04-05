@@ -19,12 +19,16 @@ export const invoiceService = {
     const res = await apiClient.get(`/invoices/${id}`);
     return res.data;
   },
-  create: async (data: any) => {
-    const res = await apiClient.post('/invoices', data);
+  checkout: async (data: { orderId: string; promotionCode?: string; paymentMethod: string }) => {
+    const res = await apiClient.post('/invoices/checkout', data);
     return res.data;
   },
-  pay: async (id: string, data: { paymentMethod: string }) => {
-    const res = await apiClient.put(`/invoices/${id}/pay`, data);
+  pay: async (id: string) => {
+    const res = await apiClient.put(`/invoices/${id}/pay`, {});
+    return res.data;
+  },
+  refund: async (id: string) => {
+    const res = await apiClient.put(`/invoices/${id}/refund`, {});
     return res.data;
   }
 };

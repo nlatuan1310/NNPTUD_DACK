@@ -4,9 +4,9 @@ import { foodService, type Food } from '../../services/foodService';
 import { categoryService, type Category } from '../../services/categoryService';
 import { tableService, type Table } from '../../services/tableService';
 import { orderService, type Order } from '../../services/orderService';
-import { ShoppingCart, LayoutDashboard, Plus, Minus, CreditCard, UtensilsCrossed } from 'lucide-react';
+import { invoiceService } from '../../services/invoiceService';
+import { ShoppingCart, LayoutDashboard, Plus, Minus, CreditCard, UtensilsCrossed, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 export default function POS() {
   const { user } = useAuth();
   
@@ -22,6 +22,12 @@ export default function POS() {
   // Active Order
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
+
+  // Checkout Modal
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [promotionCode, setPromotionCode] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -147,6 +153,43 @@ export default function POS() {
       fetchActiveOrder(selectedTableId);
     } catch (error) {
       toast.error('Không thể xóa món');
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!activeOrder) return;
+    try {
+      setIsProcessingPayment(true);
+      
+      // Lấy orderId hiện tại
+      // 1. Sinh Bill nháp (tính cả KM) và tạo Invoice
+      const checkoutRes = await invoiceService.checkout({
+        orderId: activeOrder.id,
+        promotionCode: promotionCode.trim() || undefined,
+        paymentMethod: paymentMethod
+      });
+      
+      if (checkoutRes.success && checkoutRes.data.id) {
+        // 2. Chốt thanh toán ngay
+        const payRes = await invoiceService.pay(checkoutRes.data.id);
+        if (payRes.success) {
+          toast.success('Thanh toán thành công! Bàn đã được giải phóng.');
+          // Đóng modal, reset state
+          setIsCheckoutOpen(false);
+          setPromotionCode('');
+          setPaymentMethod('CASH');
+          // Refresh query
+          const tRes = await tableService.getAll();
+          setTables(tRes.data);
+          
+          setActiveOrder(null);
+          setSelectedTableId('');
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi thanh toán');
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -345,6 +388,7 @@ export default function POS() {
                 <span className="text-xl font-black text-primary-600">{activeOrder.totalAmount.toLocaleString()} ₫</span>
               </div>
               <button 
+                onClick={() => setIsCheckoutOpen(true)}
                 className="w-full py-3.5 bg-dark-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg"
               >
                 <CreditCard size={18} />
@@ -355,6 +399,69 @@ export default function POS() {
         </div>
         
       </div>
+
+      {/* Checkout Modal */}
+      {isCheckoutOpen && activeOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div className="p-5 border-b border-dark-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-dark-900">Thanh Toán Đơn Hàng</h2>
+              <button onClick={() => setIsCheckoutOpen(false)} className="text-dark-400 hover:text-dark-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-dark-50 p-4 rounded-xl border border-dark-100 flex items-center justify-between">
+                <span className="text-dark-600 font-medium">Tổng tiền gốc:</span>
+                <span className="text-xl font-black text-primary-600">{activeOrder.totalAmount.toLocaleString()} ₫</span>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-1">Mã Khuyến Mãi (Nếu có)</label>
+                <input
+                  type="text"
+                  value={promotionCode}
+                  onChange={(e) => setPromotionCode(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-50 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none uppercase"
+                  placeholder="VD: GIAM10K"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-1">Phương thức thanh toán <span className="text-danger-500">*</span></label>
+                <select 
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-50 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+                >
+                  <option value="CASH">Tiền mặt</option>
+                  <option value="BANK_TRANSFER">Chuyển khoản</option>
+                  <option value="CREDIT_CARD">Thẻ Tín dụng / Ghi nợ</option>
+                </select>
+              </div>
+
+            </div>
+            <div className="p-5 border-t border-dark-100 bg-dark-50 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCheckoutOpen(false)}
+                className="flex-1 px-4 py-2.5 bg-white border border-dark-200 text-dark-700 font-medium rounded-xl hover:bg-dark-50 transition-colors"
+                disabled={isProcessingPayment}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleCheckout}
+                disabled={isProcessingPayment}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/30 disabled:opacity-50 flex items-center justify-center"
+              >
+                {isProcessingPayment ? 'Đang xử lý...' : 'Xác Nhận Thu Tiền'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

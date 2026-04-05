@@ -7,16 +7,18 @@ const {
     updatePromotion 
 } = require('../controllers/promotionController');
 
-// @TODO: Sau này thêm middleware check Auth/Role tại đây để bảo vệ Endpoint
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
+
+router.use(verifyToken);
 
 router.route('/')
     .get(getPromotions)
-    .post(createPromotion); // Cần Middleware Admin/Manager
+    .post(checkRole('MANAGER'), createPromotion);
 
 router.route('/:code/validate')
     .get(validatePromotion);
 
 router.route('/:id')
-    .put(updatePromotion); // Cần Middleware Admin/Manager
+    .put(checkRole('MANAGER'), updatePromotion);
 
 module.exports = router;
