@@ -10,8 +10,10 @@ const {
     removeOrderItem
 } = require('../controllers/orderController');
 
-// @TODO: Gắn Middleware xác thực (Auth) ở đây sau khi làm xong Authen
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
+router.use(verifyToken);
+router.use(checkRole('MANAGER', 'STAFF'));
 router.route('/')
     .get(getOrders)
     .post(createOrder);
