@@ -1,14 +1,7 @@
 const prisma = require('../config/db');
+const bcrypt = require('bcryptjs');
 
-// ============================================================
-// NGHIỆP VỤ NHÀ HÀNG - Quy tắc đặt bàn:
-// - Khách chọn ngày giờ đến (reservationTime) và số khách (guestCount).
-// - Hệ thống kiểm tra bàn đó có đang bị giữ chỗ trong khung giờ đó không.
-// - Một lượt đặt bàn (reservation) chiếm giữ bàn trong khoảng thời gian
-//   RESERVATION_DURATION_HOURS (mặc định 2 tiếng) kể từ reservationTime.
-// - Nếu thời gian đặt mới chồng lấn với bất kỳ reservation nào đang
-//   PENDING hoặc CONFIRMED trên cùng bàn đó → từ chối.
-// ============================================================
+
 
 const RESERVATION_DURATION_HOURS = 2; // Mỗi lượt đặt bàn giữ chỗ 2 tiếng
 
@@ -16,13 +9,10 @@ const RESERVATION_DURATION_HOURS = 2; // Mỗi lượt đặt bàn giữ chỗ 2
 const checkTimeConflict = async (tableId, newStart, excludeId = null) => {
   const newEnd = new Date(newStart.getTime() + RESERVATION_DURATION_HOURS * 60 * 60 * 1000);
 
-  // Tìm tất cả reservation đang active (PENDING hoặc CONFIRMED)
-  // trên cùng bàn, mà khoảng thời gian bị chồng lấn
   const whereCondition = {
     tableId,
     status: { in: ['PENDING', 'CONFIRMED'] },
-    // Hai khoảng [A_start, A_end) và [B_start, B_end) giao nhau khi:
-    // A_start < B_end AND A_end > B_start
+
     reservationTime: {
       lt: newEnd, // existing_start < new_end
     },
@@ -32,9 +22,6 @@ const checkTimeConflict = async (tableId, newStart, excludeId = null) => {
     whereCondition.id = { not: excludeId };
   }
 
-  // Chúng ta cần kiểm tra thêm: existing_end > new_start
-  // existing_end = existing_start + DURATION
-  // → existing_start > new_start - DURATION
   const earliestConflictStart = new Date(
     newStart.getTime() - RESERVATION_DURATION_HOURS * 60 * 60 * 1000
   );
@@ -53,20 +40,69 @@ const checkTimeConflict = async (tableId, newStart, excludeId = null) => {
   return conflict;
 };
 
-/**
- * POST /api/v1/reservations
- * Tạo đặt bàn mới. Khách hoặc Nhân viên đặt hộ.
- * Body: { tableId, reservationTime, guestCount }
- */
+
 const createReservation = async (req, res, next) => {
   try {
-    const { tableId, reservationTime, guestCount } = req.body || {};
+    const { tableId, reservationTime, guestCount, userId, newCustomer } = req.body || {};
 
     if (!tableId || !reservationTime || !guestCount) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng cung cấp đầy đủ: tableId, reservationTime, guestCount.',
       });
+    }
+
+    // ========== XÁC ĐỊNH KHÁCH HÀNG ==========
+    let customerId = req.user.id; // Mặc định: người đang đăng nhập
+
+    if (req.user.role === 'MANAGER') {
+      if (newCustomer) {
+        // MANAGER tạo khách hàng mới inline
+        const { name, email, phone } = newCustomer;
+        if (!name || !email) {
+          return res.status(400).json({
+            success: false,
+            message: 'Vui lòng cung cấp tên và email cho khách hàng mới.',
+          });
+        }
+
+        // Kiểm tra email đã tồn tại
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+          return res.status(409).json({
+            success: false,
+            message: `Email "${email}" đã tồn tại trong hệ thống. Hãy chọn khách hàng từ danh sách.`,
+          });
+        }
+
+        // Tạo khách hàng mới với mật khẩu mặc định
+        const hashedPassword = await bcrypt.hash('123456', 10);
+        const createdCustomer = await prisma.user.create({
+          data: {
+            name,
+            email,
+            password: hashedPassword,
+            phone: phone || null,
+            role: 'CUSTOMER',
+          },
+        });
+        customerId = createdCustomer.id;
+      } else if (userId) {
+        // MANAGER chọn khách hàng hiện có
+        const existingCustomer = await prisma.user.findUnique({ where: { id: userId } });
+        if (!existingCustomer) {
+          return res.status(404).json({
+            success: false,
+            message: 'Không tìm thấy khách hàng.',
+          });
+        }
+        customerId = userId;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng chọn khách hàng hoặc thêm thông tin khách hàng mới.',
+        });
+      }
     }
 
     // Kiểm tra bàn tồn tại
@@ -110,7 +146,7 @@ const createReservation = async (req, res, next) => {
     // Tạo reservation
     const reservation = await prisma.reservation.create({
       data: {
-        userId: req.user.id,
+        userId: customerId,
         tableId,
         reservationTime: requestedTime,
         guestCount: parseInt(guestCount),
@@ -131,11 +167,7 @@ const createReservation = async (req, res, next) => {
   }
 };
 
-/**
- * GET /api/v1/reservations
- * Lấy toàn bộ danh sách đặt bàn (MANAGER, STAFF).
- * Query params: ?status=PENDING&date=2026-04-05
- */
+
 const getAllReservations = async (req, res, next) => {
   try {
     const { status, date } = req.query;
@@ -174,10 +206,7 @@ const getAllReservations = async (req, res, next) => {
   }
 };
 
-/**
- * GET /api/v1/reservations/my
- * Lấy lịch sử đặt bàn của khách hàng đang đăng nhập (CUSTOMER).
- */
+
 const getMyReservations = async (req, res, next) => {
   try {
     const reservations = await prisma.reservation.findMany({
@@ -198,16 +227,7 @@ const getMyReservations = async (req, res, next) => {
   }
 };
 
-/**
- * PUT /api/v1/reservations/:id/status
- * Cập nhật trạng thái đặt bàn (MANAGER, STAFF).
- * Body: { status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' }
- *
- * Nghiệp vụ nhà hàng:
- * - PENDING → CONFIRMED: Nhà hàng xác nhận đơn đặt.
- * - PENDING/CONFIRMED → CANCELLED: Hủy đặt bàn.
- * - CONFIRMED → COMPLETED: Khách đã đến và hoàn tất phiên ăn.
- */
+
 const updateReservationStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -267,9 +287,140 @@ const updateReservationStatus = async (req, res, next) => {
   }
 };
 
+
+const updateReservation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { tableId, reservationTime, guestCount } = req.body || {};
+
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: { table: true },
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đặt chỗ.',
+      });
+    }
+
+    // Chuẩn bị dữ liệu cập nhật
+    const updateData = {};
+    const finalTableId = tableId || reservation.tableId;
+    const finalTime = reservationTime ? new Date(reservationTime) : reservation.reservationTime;
+    const finalGuestCount = guestCount ? parseInt(guestCount) : reservation.guestCount;
+
+    // Nếu thay đổi bàn, kiểm tra bàn tồn tại
+    if (tableId && tableId !== reservation.tableId) {
+      const table = await prisma.table.findUnique({ where: { id: tableId } });
+      if (!table) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy bàn.',
+        });
+      }
+      // Kiểm tra sức chứa
+      if (finalGuestCount > table.capacity) {
+        return res.status(400).json({
+          success: false,
+          message: `Bàn số ${table.tableNumber} chỉ chứa tối đa ${table.capacity} khách.`,
+        });
+      }
+      updateData.tableId = tableId;
+    }
+
+    // Nếu thay đổi thời gian, kiểm tra phải ở tương lai
+    if (reservationTime) {
+      if (finalTime <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Thời gian đặt bàn phải ở tương lai.',
+        });
+      }
+      updateData.reservationTime = finalTime;
+    }
+
+    if (guestCount) {
+      // Kiểm tra sức chứa bàn hiện tại
+      const currentTable = tableId
+        ? await prisma.table.findUnique({ where: { id: tableId } })
+        : reservation.table;
+      if (finalGuestCount > currentTable.capacity) {
+        return res.status(400).json({
+          success: false,
+          message: `Bàn chỉ chứa tối đa ${currentTable.capacity} khách.`,
+        });
+      }
+      updateData.guestCount = finalGuestCount;
+    }
+
+    // Kiểm tra xung đột thời gian nếu đổi bàn hoặc đổi giờ
+    if (tableId || reservationTime) {
+      const conflict = await checkTimeConflict(finalTableId, finalTime, id);
+      if (conflict) {
+        const conflictEnd = new Date(
+          conflict.reservationTime.getTime() + RESERVATION_DURATION_HOURS * 60 * 60 * 1000
+        );
+        return res.status(400).json({
+          success: false,
+          message: `Bàn đã được đặt trong khung giờ ${conflict.reservationTime.toLocaleString('vi-VN')} – ${conflictEnd.toLocaleString('vi-VN')}. Vui lòng chọn khung giờ khác.`,
+        });
+      }
+    }
+
+    const updatedReservation = await prisma.reservation.update({
+      where: { id },
+      data: updateData,
+      include: {
+        table: { select: { tableNumber: true, floor: true, capacity: true } },
+        user: { select: { name: true, email: true, phone: true } },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật đặt bàn thành công.',
+      data: updatedReservation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const deleteReservation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: { table: { select: { tableNumber: true } } },
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đặt chỗ.',
+      });
+    }
+
+    await prisma.reservation.delete({ where: { id } });
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã xóa đặt bàn #${reservation.table.tableNumber}.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createReservation,
   getAllReservations,
   getMyReservations,
   updateReservationStatus,
+  updateReservation,
+  deleteReservation,
 };
