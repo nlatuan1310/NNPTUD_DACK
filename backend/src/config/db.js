@@ -1,20 +1,17 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
 const { PrismaClient } = require('@prisma/client');
-const { Pool, neonConfig } = require('@neondatabase/serverless');
-const { PrismaNeon } = require('@prisma/adapter-neon');
-const ws = require('ws');
 
-// Gán WebSocket chuẩn để có thể chạy trên môi trường Node.js Serverless
-neonConfig.webSocketConstructor = ws;
-
-// Lấy link kết nối Pool từ env
+// Lấy link kết nối từ env (-pooler link)
 const connectionString = process.env.DATABASE_URL;
 
-// Khởi tạo Pool chuyên biệt 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaNeon(pool);
-
-// Khởi tạo và báo cho Prisma sử dụng adapter này
+// Dùng 'pg' chuẩn tương thích với PrismaPg thay vì @neondatabase/serverless
+// Serverless driver không hỗ trợ "-pooler" URL của môi trường Runtime.
+const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 module.exports = prisma;
