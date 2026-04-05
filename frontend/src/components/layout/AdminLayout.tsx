@@ -5,6 +5,11 @@ import {
   UtensilsCrossed,
   CalendarCheck,
   Users,
+  Layers,
+  Utensils,
+  ShoppingCart,
+  FileText,
+  Tag,
   LogOut,
   ChevronLeft,
   Menu,
@@ -12,8 +17,13 @@ import {
 import { useState } from 'react';
 
 const navItems = [
+  { to: '/staff/pos', label: 'Bán Hàng (POS)', icon: ShoppingCart, roles: ['MANAGER', 'STAFF'] },
   { to: '/admin/tables', label: 'Quản lý bàn', icon: LayoutDashboard, roles: ['MANAGER', 'STAFF'] },
   { to: '/admin/reservations', label: 'Đặt bàn', icon: CalendarCheck, roles: ['MANAGER', 'STAFF'] },
+  { to: '/admin/categories', label: 'Danh mục món', icon: Layers, roles: ['MANAGER'] },
+  { to: '/admin/foods', label: 'Thực đơn', icon: Utensils, roles: ['MANAGER'] },
+  { to: '/admin/promotions', label: 'Khuyến mãi', icon: Tag, roles: ['MANAGER'] },
+  { to: '/admin/invoices', label: 'Hóa đơn', icon: FileText, roles: ['MANAGER'] },
   { to: '/admin/users', label: 'Nhân sự', icon: Users, roles: ['MANAGER', 'STAFF'] },
 ];
 
