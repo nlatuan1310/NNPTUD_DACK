@@ -12,7 +12,6 @@ import {
   Hash,
   Layers,
   Phone,
-  Mail,
   CheckCircle2,
   XCircle,
   Filter,
@@ -21,8 +20,6 @@ import {
   Pencil,
   Trash2,
   X,
-  Search,
-  UserPlus,
 } from 'lucide-react';
 
 interface ReservationItem {
@@ -31,7 +28,8 @@ interface ReservationItem {
   guestCount: number;
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
   table: { tableNumber: number; floor: number; capacity: number };
-  user: { id: string; name: string; email: string; phone: string | null };
+  customerName: string;
+  customerPhone: string;
 }
 
 interface TableItem {
@@ -42,13 +40,6 @@ interface TableItem {
   status: string;
 }
 
-interface CustomerItem {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: string;
-}
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Hourglass }> = {
   PENDING: { label: 'Chờ duyệt', color: 'text-warning-600', bg: 'bg-warning-500/10', icon: Hourglass },
@@ -68,19 +59,14 @@ export default function ReservationTracking() {
   const [showModal, setShowModal] = useState(false);
   const [editReservation, setEditReservation] = useState<ReservationItem | null>(null);
   const [tables, setTables] = useState<TableItem[]>([]);
-  const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [form, setForm] = useState({
     tableId: '',
     reservationDate: '',
     reservationTime: '',
     guestCount: '',
+    customerName: '',
+    customerPhone: '',
   });
-
-  // Customer selection state
-  const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing');
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '' });
 
   const fetchReservations = async () => {
     try {
@@ -105,14 +91,7 @@ export default function ReservationTracking() {
     }
   };
 
-  const fetchCustomers = async () => {
-    try {
-      const res = await apiClient.get('/users', { params: { role: 'CUSTOMER' } });
-      setCustomers(res.data.data);
-    } catch {
-      // silent
-    }
-  };
+
 
   useEffect(() => {
     fetchReservations();
@@ -132,7 +111,7 @@ export default function ReservationTracking() {
   };
 
   const handleDelete = async (r: ReservationItem) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa đơn đặt bàn ${r.table.tableNumber} của ${r.user.name}?`)) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa đơn đặt bàn ${r.table.tableNumber} của khách ${r.customerName}?`)) return;
     try {
       await apiClient.delete(`/reservations/${r.id}`);
       toast.success('Đã xóa đơn đặt bàn.');
@@ -146,13 +125,8 @@ export default function ReservationTracking() {
   // Modal handlers
   const openCreate = () => {
     setEditReservation(null);
-    setForm({ tableId: '', reservationDate: '', reservationTime: '', guestCount: '' });
-    setCustomerMode('existing');
-    setSelectedCustomerId('');
-    setCustomerSearch('');
-    setNewCustomer({ name: '', email: '', phone: '' });
+    setForm({ tableId: '', reservationDate: '', reservationTime: '', guestCount: '', customerName: '', customerPhone: '' });
     fetchTables();
-    fetchCustomers();
     setShowModal(true);
   };
 
@@ -164,6 +138,8 @@ export default function ReservationTracking() {
       reservationDate: format(dt, 'yyyy-MM-dd'),
       reservationTime: format(dt, 'HH:mm'),
       guestCount: String(r.guestCount),
+      customerName: r.customerName,
+      customerPhone: r.customerPhone,
     });
     fetchTables();
     setShowModal(true);
@@ -200,17 +176,9 @@ export default function ReservationTracking() {
           tableId: form.tableId,
           reservationTime: reservationDateTime.toISOString(),
           guestCount: parseInt(form.guestCount),
+          customerName: form.customerName,
+          customerPhone: form.customerPhone,
         };
-
-        if (customerMode === 'existing') {
-          payload.userId = selectedCustomerId;
-        } else {
-          payload.newCustomer = {
-            name: newCustomer.name,
-            email: newCustomer.email,
-            phone: newCustomer.phone || undefined,
-          };
-        }
 
         await apiClient.post('/reservations', payload);
         toast.success('Tạo đặt bàn thành công!');
@@ -241,15 +209,7 @@ export default function ReservationTracking() {
   // Selected table info for capacity hint
   const selectedTable = tables.find((t) => t.id === form.tableId);
 
-  // Filter customers by search
-  const filteredCustomers = customers.filter((c) => {
-    const q = customerSearch.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      (c.phone && c.phone.includes(q))
-    );
-  });
+
 
   return (
     <div className="animate-fade-in">
@@ -342,17 +302,11 @@ export default function ReservationTracking() {
                   {/* Customer */}
                   <div className="w-[180px] shrink-0">
                     <p className="text-xs text-dark-400 mb-1 font-medium">Khách hàng</p>
-                    <p className="font-semibold text-dark-800 text-sm">{r.user.name}</p>
+                    <p className="font-semibold text-dark-800 text-sm">{r.customerName}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <Mail size={11} className="text-dark-300 shrink-0" />
-                      <span className="text-xs text-dark-400 truncate">{r.user.email}</span>
+                      <Phone size={11} className="text-dark-300 shrink-0" />
+                      <span className="text-xs text-dark-400">{r.customerPhone}</span>
                     </div>
-                    {r.user.phone && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Phone size={11} className="text-dark-300 shrink-0" />
-                        <span className="text-xs text-dark-400">{r.user.phone}</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Time */}
@@ -476,131 +430,30 @@ export default function ReservationTracking() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
 
-              {/* ===== CUSTOMER SECTION (only for CREATE) ===== */}
               {!editReservation && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-3">Khách hàng *</label>
-
-                  {/* Toggle buttons */}
-                  <div className="flex gap-1 bg-dark-50 rounded-xl p-1 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setCustomerMode('existing')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                        customerMode === 'existing'
-                          ? 'bg-white text-dark-800 shadow-sm'
-                          : 'text-dark-400 hover:text-dark-600'
-                      }`}
-                    >
-                      <Search size={14} />
-                      Khách hiện có
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCustomerMode('new')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                        customerMode === 'new'
-                          ? 'bg-white text-dark-800 shadow-sm'
-                          : 'text-dark-400 hover:text-dark-600'
-                      }`}
-                    >
-                      <UserPlus size={14} />
-                      Thêm khách mới
-                    </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-dark-700 mb-2">Tên khách hàng *</label>
+                    <input
+                      type="text"
+                      value={form.customerName}
+                      onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+                      required
+                      placeholder="VD: Nguyễn Văn A"
+                      className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
+                    />
                   </div>
-
-                  {customerMode === 'existing' ? (
-                    <div>
-                      {/* Search input */}
-                      <div className="relative mb-3">
-                        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-300" />
-                        <input
-                          type="text"
-                          value={customerSearch}
-                          onChange={(e) => setCustomerSearch(e.target.value)}
-                          placeholder="Tìm theo tên, email, SĐT..."
-                          className="w-full pl-10 pr-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-                        />
-                      </div>
-
-                      {/* Customer list */}
-                      <div className="max-h-[180px] overflow-y-auto rounded-xl border border-dark-100 divide-y divide-dark-50">
-                        {filteredCustomers.length === 0 ? (
-                          <div className="p-4 text-center text-dark-400 text-sm">
-                            Không tìm thấy khách hàng.
-                          </div>
-                        ) : (
-                          filteredCustomers.map((c) => (
-                            <label
-                              key={c.id}
-                              className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                                selectedCustomerId === c.id
-                                  ? 'bg-primary-50 border-l-3 border-l-primary-500'
-                                  : 'hover:bg-dark-50'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="customerId"
-                                value={c.id}
-                                checked={selectedCustomerId === c.id}
-                                onChange={() => setSelectedCustomerId(c.id)}
-                                className="accent-primary-500 w-4 h-4 shrink-0"
-                                required={customerMode === 'existing'}
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-dark-800 truncate">{c.name}</p>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                  <span className="text-xs text-dark-400 truncate">{c.email}</span>
-                                  {c.phone && (
-                                    <span className="text-xs text-dark-400 shrink-0">• {c.phone}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </label>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-dark-500 mb-1.5">Họ tên *</label>
-                        <input
-                          type="text"
-                          value={newCustomer.name}
-                          onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                          required={customerMode === 'new'}
-                          placeholder="Nguyễn Văn A"
-                          className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-dark-500 mb-1.5">Email *</label>
-                        <input
-                          type="email"
-                          value={newCustomer.email}
-                          onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                          required={customerMode === 'new'}
-                          placeholder="email@example.com"
-                          className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-dark-500 mb-1.5">Số điện thoại</label>
-                        <input
-                          type="tel"
-                          value={newCustomer.phone}
-                          onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                          placeholder="0912345678"
-                          className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-                        />
-                      </div>
-                      <p className="text-xs text-dark-400 bg-dark-50 rounded-lg p-2.5">
-                        💡 Khách hàng mới sẽ được tạo tài khoản với mật khẩu mặc định <strong>123456</strong>
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-700 mb-2">Số điện thoại *</label>
+                    <input
+                      type="tel"
+                      value={form.customerPhone}
+                      onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+                      required
+                      placeholder="VD: 0912345678"
+                      className="w-full px-4 py-2.5 border border-dark-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
+                    />
+                  </div>
                 </div>
               )}
 

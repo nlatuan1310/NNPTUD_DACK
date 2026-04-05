@@ -12,16 +12,14 @@ model User {
   name         String
   email        String        @unique
   password     String
-  role         Role          @default(CUSTOMER)
+  role         Role          @default(STAFF)
   phone        String?
   
   // Relations
-  reservations Reservation[]
   staffOrders  Order[]       @relation("StaffOrders")
 }
 
 enum Role {
-  CUSTOMER
   STAFF
   MANAGER
 }
@@ -87,8 +85,9 @@ model Reservation {
   guestCount      Int
   status          ReservationStatus @default(PENDING)
 
-  userId          String
-  user            User              @relation(fields: [userId], references: [id])
+  customerName    String
+  customerPhone   String
+  
   tableId         String
   table           Table             @relation(fields: [tableId], references: [id])
 }

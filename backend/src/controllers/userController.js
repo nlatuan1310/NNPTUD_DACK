@@ -16,7 +16,7 @@ const createUser = async (req, res, next) => {
       });
     }
 
-    const validRoles = ['CUSTOMER', 'STAFF', 'MANAGER'];
+    const validRoles = ['STAFF', 'MANAGER'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -64,8 +64,8 @@ const createUser = async (req, res, next) => {
 /**
  * GET /api/v1/users
  * Lấy danh sách người dùng.
- * - MANAGER: Xem toàn bộ nhân sự và khách hàng.
- * - STAFF: Chỉ được xem thông tin KHÁCH HÀNG (role = CUSTOMER).
+ * - MANAGER: Xem toàn bộ nhân sự.
+ * - STAFF: Chỉ được xem thông tin danh sách nhân sự (nếu có quyền).
  */
 const getAllUsers = async (req, res, next) => {
   try {
@@ -73,11 +73,13 @@ const getAllUsers = async (req, res, next) => {
     let whereCondition = {};
 
     if (req.user.role === 'STAFF') {
-      // Ép buộc nhân viên chỉ xem được Customer dù có query role gì đi nữa
-      whereCondition.role = 'CUSTOMER';
-    } else if (req.user.role === 'MANAGER' && role) {
-      // Manager có quyền lọc theo parameter
-      whereCondition.role = role;
+      whereCondition.role = 'STAFF'; // Staff chỉ thấy nội bộ staff với nhau nếu có quyền
+    } else if (req.user.role === 'MANAGER') {
+      if (role) {
+        whereCondition.role = role;
+      } else {
+        whereCondition.role = { in: ['STAFF', 'MANAGER'] };
+      }
     }
 
     const users = await prisma.user.findMany({
@@ -121,7 +123,7 @@ const updateUser = async (req, res, next) => {
     }
 
     // Nếu đổi role sang thứ không hợp lệ
-    const validRoles = ['CUSTOMER', 'STAFF', 'MANAGER'];
+    const validRoles = ['STAFF', 'MANAGER'];
     if (role && !validRoles.includes(role)) {
       return res.status(400).json({
         success: false,

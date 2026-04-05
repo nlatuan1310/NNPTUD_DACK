@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: Array<'CUSTOMER' | 'STAFF' | 'MANAGER'>;
+  allowedRoles?: Array<'STAFF' | 'MANAGER'>;
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -25,10 +25,6 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Customer không được vào admin và ngược lại
-    if (user.role === 'CUSTOMER') {
-      return <Navigate to="/" replace />;
-    }
     return <Navigate to="/admin/tables" replace />;
   }
 

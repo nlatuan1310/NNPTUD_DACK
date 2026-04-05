@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe } = require('../controllers/authController');
+const { login, getMe } = require('../controllers/authController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
-// POST /api/v1/auth/register - Đăng ký tài khoản
-router.post('/register', register);
 
 // POST /api/v1/auth/login - Đăng nhập
 router.post('/login', login);
