@@ -15,8 +15,14 @@ import Register from './pages/auth/Register';
 import UserList from './pages/admin/UserList';
 import TableManager from './pages/admin/TableManager';
 import ReservationTracking from './pages/admin/ReservationTracking';
+import CategoryManager from './pages/admin/CategoryManager';
+import FoodManager from './pages/admin/FoodManager';
+import InvoiceHistory from './pages/admin/InvoiceHistory';
+import PromotionManager from './pages/admin/PromotionManager';
+import POS from './pages/staff/POS';
 
 // Customer pages
+import Menu from './pages/customer/Menu';
 import Booking from './pages/customer/Booking';
 import MyBookings from './pages/customer/MyBookings';
 
@@ -42,7 +48,8 @@ function AppRoutes() {
 
       {/* Customer Portal */}
       <Route element={<ProtectedRoute allowedRoles={['CUSTOMER']}><CustomerLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Booking />} />
+        <Route path="/" element={<Menu />} />
+        <Route path="/menu" element={<Menu />} />
         <Route path="/reservation/new" element={<Booking />} />
         <Route path="/my-reservations" element={<MyBookings />} />
       </Route>
@@ -52,6 +59,11 @@ function AppRoutes() {
         <Route path="/admin/tables" element={<TableManager />} />
         <Route path="/admin/reservations" element={<ReservationTracking />} />
         <Route path="/admin/users" element={<UserList />} />
+        <Route path="/admin/categories" element={<CategoryManager />} />
+        <Route path="/admin/foods" element={<FoodManager />} />
+        <Route path="/admin/promotions" element={<PromotionManager />} />
+        <Route path="/admin/invoices" element={<InvoiceHistory />} />
+        <Route path="/staff/pos" element={<POS />} />
       </Route>
 
       {/* Catch-all */}

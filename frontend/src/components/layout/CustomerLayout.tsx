@@ -29,6 +29,19 @@ export default function CustomerLayout() {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             <NavLink
+              to="/menu"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/25'
+                    : 'text-dark-600 hover:bg-dark-100 hover:text-dark-900'
+                }`
+              }
+            >
+              <UtensilsCrossed size={16} />
+              Thực đơn
+            </NavLink>
+            <NavLink
               to="/reservation/new"
               className={({ isActive }) =>
                 `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -79,6 +92,13 @@ export default function CustomerLayout() {
                 </div>
                 {/* Mobile nav links */}
                 <div className="md:hidden border-b border-dark-100 py-1">
+                  <NavLink
+                    to="/menu"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-dark-600 hover:bg-dark-50"
+                  >
+                    <UtensilsCrossed size={15} /> Thực đơn
+                  </NavLink>
                   <NavLink
                     to="/reservation/new"
                     onClick={() => setMenuOpen(false)}
