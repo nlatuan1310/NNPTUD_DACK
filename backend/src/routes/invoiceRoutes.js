@@ -6,15 +6,17 @@ const {
     deleteInvoice
 } = require('../controllers/invoiceController');
 
-// @TODO: Gắn Middleware Role/Auth (Đặc biệt chặn các Quyền xoá)
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
+
+router.use(verifyToken);
 
 router.route('/checkout')
-    .post(checkout);
+    .post(checkRole('MANAGER', 'STAFF'), checkout);
 
 router.route('/:id/pay')
-    .put(confirmPayment);
+    .put(checkRole('MANAGER', 'STAFF'), confirmPayment);
 
 router.route('/:id')
-    .delete(deleteInvoice); // Cần gắn Roll CHECK MANAGER SAU NÀY
+    .delete(checkRole('MANAGER'), deleteInvoice);
 
 module.exports = router;

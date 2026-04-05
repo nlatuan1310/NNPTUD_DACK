@@ -9,17 +9,19 @@ const {
     deleteFood
 } = require('../controllers/foodController');
 
-// @TODO: Gắn các Middleware chặn quyền (Admin / Manager) vào các phương thức POST, PUT, DELETE sau
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
+
+router.use(verifyToken);
 
 // Route: /api/v1/foods
 router.route('/')
-    .get(getFoods)        // Lấy danh sách (Public)
-    .post(createFood);    // Tạo món ăn (Manager)
+    .get(getFoods)
+    .post(checkRole('MANAGER'), createFood);
 
 // Route: /api/v1/foods/:id
 router.route('/:id')
-    .get(getFoodById)     // Xem chi tiết (Public)
-    .put(updateFood)      // Sửa món ăn (Manager)
-    .delete(deleteFood);  // Xóa món ăn (Manager)
+    .get(getFoodById)
+    .put(checkRole('MANAGER'), updateFood)
+    .delete(checkRole('MANAGER'), deleteFood);
 
 module.exports = router;

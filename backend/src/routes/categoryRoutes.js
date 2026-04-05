@@ -9,17 +9,19 @@ const {
     deleteCategory
 } = require('../controllers/categoryController');
 
-// @TODO: Sau này thêm middleware xác thực (authenticate) và phân quyền (authorizeManager) tại đây
+const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
+
+router.use(verifyToken);
 
 // Route: /api/v1/categories
 router.route('/')
-    .get(getCategories)       // Lấy danh sách tất cả danh mục (Public)
-    .post(createCategory);    // Tạo danh mục mới (Manager)
+    .get(getCategories)
+    .post(checkRole('MANAGER'), createCategory);
 
 // Route: /api/v1/categories/:id
 router.route('/:id')
-    .get(getCategoryById)     // Lấy chi tiết 1 danh mục + danh sách món ăn của nó (Public)
-    .put(updateCategory)      // Cập nhật danh mục (Manager)
-    .delete(deleteCategory);  // Xóa danh mục (Manager)
+    .get(getCategoryById)
+    .put(checkRole('MANAGER'), updateCategory)
+    .delete(checkRole('MANAGER'), deleteCategory);
 
 module.exports = router;
