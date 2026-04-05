@@ -6,6 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Các Route cơ bản
+const categoryRoutes = require('./routes/categoryRoutes');
 const promotionRoutes = require('./routes/promotionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
@@ -16,6 +17,7 @@ app.use(express.json()); // Để server hiểu được req.body dưới dạng
 app.use(express.urlencoded({ extended: true }));
 
 // Sử dụng Route
+app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/promotions', promotionRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
