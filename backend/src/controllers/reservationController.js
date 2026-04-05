@@ -277,6 +277,24 @@ const updateReservationStatus = async (req, res, next) => {
       },
     });
 
+    // ========== TỰ ĐỘNG ĐỒNG BỘ TRẠNG THÁI BÀN ==========
+    if (status === 'CONFIRMED') {
+      // Duyệt đặt bàn -> Bàn chuyển sang RESERVED
+      await prisma.table.update({
+        where: { id: reservation.tableId },
+        data: { status: 'RESERVED' },
+      });
+    } else if (status === 'CANCELLED' && currentStatus === 'CONFIRMED') {
+      // Hủy đơn đã duyệt -> Kiểm tra nếu bàn đang RESERVED thì nhả về AVAILABLE
+      const table = await prisma.table.findUnique({ where: { id: reservation.tableId } });
+      if (table && table.status === 'RESERVED') {
+        await prisma.table.update({
+          where: { id: reservation.tableId },
+          data: { status: 'AVAILABLE' },
+        });
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: `Đã cập nhật trạng thái đặt bàn thành "${status}".`,

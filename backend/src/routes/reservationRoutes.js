@@ -18,7 +18,6 @@ router.post('/', checkRole('CUSTOMER', 'MANAGER'), createReservation);
 
 router.get('/', checkRole('MANAGER', 'STAFF'), getAllReservations);
 
-
 router.put('/:id', checkRole('MANAGER'), updateReservation);
 
 router.put('/:id/status', checkRole('MANAGER'), updateReservationStatus);
