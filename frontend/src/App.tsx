@@ -16,6 +16,7 @@ import CategoryManager from './pages/admin/CategoryManager';
 import FoodManager from './pages/admin/FoodManager';
 import InvoiceHistory from './pages/admin/InvoiceHistory';
 import PromotionManager from './pages/admin/PromotionManager';
+import IngredientManager from './pages/admin/IngredientManager';
 import POS from './pages/staff/POS';
 
 
@@ -47,6 +48,7 @@ function AppRoutes() {
         <Route path="/admin/categories" element={<CategoryManager />} />
         <Route path="/admin/foods" element={<FoodManager />} />
         <Route path="/admin/promotions" element={<PromotionManager />} />
+        <Route path="/admin/ingredients" element={<IngredientManager />} />
         <Route path="/admin/invoices" element={<InvoiceHistory />} />
         <Route path="/staff/pos" element={<POS />} />
       </Route>

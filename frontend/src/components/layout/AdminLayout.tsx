@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  Package,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/admin/categories', label: 'Danh mục món', icon: Layers, roles: ['MANAGER'] },
   { to: '/admin/foods', label: 'Thực đơn', icon: Utensils, roles: ['MANAGER'] },
   { to: '/admin/promotions', label: 'Khuyến mãi', icon: Tag, roles: ['MANAGER'] },
+  { to: '/admin/ingredients', label: 'Kho nguyên liệu', icon: Package, roles: ['MANAGER', 'STAFF'] },
   { to: '/admin/invoices', label: 'Hóa đơn', icon: FileText, roles: ['MANAGER'] },
   { to: '/admin/users', label: 'Nhân sự', icon: Users, roles: ['MANAGER', 'STAFF'] },
 ];
