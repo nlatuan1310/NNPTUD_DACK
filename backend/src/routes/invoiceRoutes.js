@@ -4,12 +4,16 @@ const {
     checkout,
     confirmPayment,
     deleteInvoice,
-    refundInvoice
+    refundInvoice,
+    getAllInvoices
 } = require('../controllers/invoiceController');
 
 const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
+
+router.route('/')
+    .get(checkRole('MANAGER', 'STAFF'), getAllInvoices);
 
 router.route('/checkout')
     .post(checkRole('MANAGER', 'STAFF'), checkout);

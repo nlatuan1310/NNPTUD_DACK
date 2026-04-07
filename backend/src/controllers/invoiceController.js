@@ -209,9 +209,36 @@ const refundInvoice = async (req, res) => {
     }
 };
 
+// @desc    Lấy danh sách tất cả hóa đơn
+// @route   GET /api/v1/invoices
+const getAllInvoices = async (req, res) => {
+    try {
+        const invoices = await prisma.invoice.findMany({
+            orderBy: {
+                createdAt: 'desc'
+            },
+            include: {
+                order: {
+                    include: {
+                        table: true,
+                        staff: { select: { name: true } }
+                    }
+                },
+                promotion: true
+            }
+        });
+
+        res.status(200).json({ success: true, count: invoices.length, data: invoices });
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách hoá đơn:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi lấy danh sách hoá đơn' });
+    }
+};
+
 module.exports = {
     checkout,
     confirmPayment,
     deleteInvoice,
-    refundInvoice
+    refundInvoice,
+    getAllInvoices
 };
